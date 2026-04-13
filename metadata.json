@@ -1,0 +1,5 @@
+{
+  "name": "Happy Running AI",
+  "description": "AI-powered student running lap tracker with paper record scanning and rankings.",
+  "requestFramePermissions": ["camera"]
+}
