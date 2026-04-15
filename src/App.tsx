@@ -28,7 +28,9 @@ import {
   User as UserIcon,
   Accessibility,
   PersonStanding,
-  LogOut
+  LogOut,
+  Cloud,
+  Eye
 } from 'lucide-react';
 import { STUDENT_DATA as INITIAL_STUDENT_DATA } from './data/students';
 import { useOpenCV } from './hooks/useOpenCV';
@@ -301,7 +303,9 @@ export default function App() {
     const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
     return saved ? JSON.parse(saved) : INITIAL_STUDENT_DATA;
   });
-  const [isDataLoading, setIsDataLoading] = useState(true);
+  const [isStudentsLoading, setIsStudentsLoading] = useState(true);
+  const [isRecordsLoading, setIsRecordsLoading] = useState(true);
+  const isSyncing = isStudentsLoading || isRecordsLoading;
   const [scanSessionIndex, setScanSessionIndex] = useState(0);
   const [inputMode, setInputMode] = useState<'photo' | 'scan'>('photo');
   const [isScanning, setIsScanning] = useState(false);
@@ -348,10 +352,10 @@ export default function App() {
         setStudents(newStudents);
         localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(newStudents));
       }
-      setIsDataLoading(false);
+      setIsStudentsLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'students');
-      setIsDataLoading(false);
+      setIsStudentsLoading(false);
     });
 
     // Listen to records
@@ -364,10 +368,10 @@ export default function App() {
         setDailyRecords(newRecords);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newRecords));
       }
-      setIsDataLoading(false);
+      setIsRecordsLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'records');
-      setIsDataLoading(false);
+      setIsRecordsLoading(false);
     });
 
     return () => {
@@ -712,7 +716,21 @@ export default function App() {
       <header className="sticky top-0 z-40 bg-white border-b border-slate-100 shadow-sm">
         <div className="p-4 bg-white">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-black text-blue-800 italic tracking-tighter uppercase">Happy Running AI 👁️</h1>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-black text-blue-800 italic tracking-tighter uppercase flex items-center gap-2">
+                Happy Running AI 👁️
+                {isSyncing && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 rounded-full border border-blue-100"
+                  >
+                    <Cloud size={10} className="text-blue-500 animate-pulse" />
+                    <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Syncing</span>
+                  </motion.div>
+                )}
+              </h1>
+            </div>
             <button 
               onClick={exportCSV}
               className="text-[10px] bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm active:scale-95 transition flex items-center gap-1"
@@ -1538,7 +1556,7 @@ export default function App() {
 
               {showMapMode ? (
                 <div className="space-y-4">
-                  {isDataLoading && Object.keys(dailyRecords).length === 0 ? (
+                  {isRecordsLoading && Object.keys(dailyRecords).length === 0 ? (
                     <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
                       <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
                       <p className="text-slate-400 font-black italic uppercase tracking-widest text-xs">正在從雲端同步地圖數據...</p>
@@ -1971,7 +1989,7 @@ export default function App() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {isDataLoading && Object.keys(dailyRecords).length === 0 ? (
+                  {isRecordsLoading && Object.keys(dailyRecords).length === 0 ? (
                     <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
                       <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto" />
                       <p className="text-slate-400 font-black italic uppercase tracking-widest text-xs">正在從雲端同步數據...</p>
@@ -2023,7 +2041,7 @@ export default function App() {
                       </div>
                     )
                   )}
-                  {!isDataLoading && (rankingView === 'high' ? highGradeRanking : middleGradeRanking).every(r => r.total === 0) && (
+                  {!isRecordsLoading && (rankingView === 'high' ? highGradeRanking : middleGradeRanking).every(r => r.total === 0) && (
                     <div className="py-10 px-6 bg-amber-50 rounded-3xl border border-amber-100 text-center space-y-2">
                       <p className="text-amber-600 font-black italic uppercase tracking-tighter">目前尚無雲端數據</p>
                       <p className="text-[10px] text-amber-400 font-bold leading-relaxed">
