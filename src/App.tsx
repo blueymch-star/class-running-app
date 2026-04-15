@@ -373,7 +373,7 @@ export default function App() {
       if (e.code === 'auth/popup-blocked') {
         setLoginError("彈出視窗被阻擋，請允許此網站顯示彈出視窗。");
       } else if (e.code === 'auth/unauthorized-domain') {
-        setLoginError("此網域尚未在 Firebase Console 的授權網域清單中。");
+        setLoginError(`此網域 (${window.location.hostname}) 尚未在 Firebase Console 的授權網域清單中。`);
       } else if (e.code === 'auth/operation-not-allowed') {
         setLoginError("Google 登入尚未在 Firebase Console 中啟用。");
       } else {
