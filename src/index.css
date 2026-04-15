@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-golden-glow: golden-glow 2s infinite;
+
+  @keyframes golden-glow {
+    0%, 100% { border-color: #fbbf24; box-shadow: 0 0 5px #fbbf24; }
+    50% { border-color: #f59e0b; box-shadow: 0 0 15px #f59e0b; }
+  }
+}

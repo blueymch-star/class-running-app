@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == "blueymch@gmail.com" && request.auth.token.email_verified == true);
+    }
+
+    // Records collection
+    match /records/{date} {
+      allow read: if true; // Publicly readable for rankings and map
+      allow write: if isAuthenticated(); // Only authenticated users can write
+    }
+
+    // Students collection
+    match /students/{className} {
+      allow read: if true; // Publicly readable
+      allow write: if isAuthenticated(); // Only authenticated users can write
+    }
+  }
+}

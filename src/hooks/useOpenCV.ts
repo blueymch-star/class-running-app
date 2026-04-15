@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 declare global {
   interface Window {
     cv: any;
+    cvReady?: boolean;
   }
 }
 
@@ -11,7 +12,7 @@ export function useOpenCV() {
 
   useEffect(() => {
     const checkCV = setInterval(() => {
-      if (window.cv && window.cv.Mat) {
+      if (window.cvReady || (window.cv && window.cv.Mat)) {
         setIsReady(true);
         clearInterval(checkCV);
         console.log("OpenCV Ready");

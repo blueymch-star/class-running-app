@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "DailyRecord": {
+      "title": "DailyRecord",
+      "description": "Records for a specific date",
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "description": "Map of uKey (class_name_session) to lap count"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["data"]
+    },
+    "ClassStudents": {
+      "title": "ClassStudents",
+      "description": "List of students in a class",
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "座號": { "type": "number" },
+              "姓名": { "type": "string" }
+            },
+            "required": ["座號", "姓名"]
+          }
+        }
+      },
+      "required": ["list"]
+    }
+  },
+  "firestore": {
+    "/records/{date}": {
+      "schema": "DailyRecord",
+      "description": "Collection of daily running records"
+    },
+    "/students/{className}": {
+      "schema": "ClassStudents",
+      "description": "Collection of student lists per class"
+    }
+  }
+}
