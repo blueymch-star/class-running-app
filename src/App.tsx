@@ -293,8 +293,15 @@ export default function App() {
   } | null>(null);
   const [editingStudent, setEditingStudent] = useState<{ class: string, index: number, name: string } | null>(null);
   const [selectedClass, setSelectedClass] = useState("四年甲班");
-  const [dailyRecords, setDailyRecords] = useState<DailyRecords>({});
-  const [students, setStudents] = useState<StudentData>(INITIAL_STUDENT_DATA);
+  const [dailyRecords, setDailyRecords] = useState<DailyRecords>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [students, setStudents] = useState<StudentData>(() => {
+    const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : INITIAL_STUDENT_DATA;
+  });
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [scanSessionIndex, setScanSessionIndex] = useState(0);
   const [inputMode, setInputMode] = useState<'photo' | 'scan'>('photo');
   const [isScanning, setIsScanning] = useState(false);
@@ -339,9 +346,12 @@ export default function App() {
       
       if (Object.keys(newStudents).length > 0) {
         setStudents(newStudents);
+        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(newStudents));
       }
+      setIsDataLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'students');
+      setIsDataLoading(false);
     });
 
     // Listen to records
@@ -352,9 +362,12 @@ export default function App() {
       });
       if (Object.keys(newRecords).length > 0) {
         setDailyRecords(newRecords);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newRecords));
       }
+      setIsDataLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'records');
+      setIsDataLoading(false);
     });
 
     return () => {
@@ -1525,10 +1538,17 @@ export default function App() {
 
               {showMapMode ? (
                 <div className="space-y-4">
-                  <div className="bg-blue-50 p-4 rounded-3xl border border-blue-100 text-center">
-                    <h3 className="text-blue-800 font-black italic tracking-tighter uppercase">快活環島大挑戰 🏃‍♂️</h3>
-                    <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest mt-1">1 圈 = 150 公尺 | 逆時針環島</p>
-                  </div>
+                  {isDataLoading && Object.keys(dailyRecords).length === 0 ? (
+                    <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                      <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto" />
+                      <p className="text-slate-400 font-black italic uppercase tracking-widest text-xs">正在從雲端同步地圖數據...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-blue-50 p-4 rounded-3xl border border-blue-100 text-center">
+                        <h3 className="text-blue-800 font-black italic tracking-tighter uppercase">快活環島大挑戰 🏃‍♂️</h3>
+                        <p className="text-[9px] text-blue-400 font-bold uppercase tracking-widest mt-1">1 圈 = 150 公尺 | 逆時針環島</p>
+                      </div>
 
                   {/* Monopoly Map Layout */}
                   <div 
@@ -1945,54 +1965,73 @@ export default function App() {
                         </motion.div>
                       );
                     })()}
-                  </AnimatePresence>
+                    </AnimatePresence>
+                    </>
+                  )}
                 </div>
               ) : (
-                rankingView === 'high' ? (
-                  <div className="space-y-4">
-                    <h3 className="font-black text-slate-800 text-lg italic px-2 tracking-tighter uppercase mb-4 text-center">Top 5th & 6th Grades</h3>
-                    <div className="space-y-4">
-                      {highGradeRanking.map((item, index) => (
-                        <div key={item.name} className="relative">
-                          <div className="flex justify-between mb-1.5 font-black uppercase text-xs">
-                            <span className="text-slate-700">#{index + 1} {item.name}</span>
-                            <span className="text-indigo-600 italic">{item.total} Laps</span>
-                          </div>
-                          <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-50">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${(item.total / (maxLapsHigh || 1) * 100)}%` }}
-                              transition={{ duration: 1, ease: "easeOut" }}
-                              className="h-full bg-gradient-to-r from-indigo-500 to-blue-700 shadow-sm"
-                            />
-                          </div>
-                        </div>
-                      ))}
+                <div className="space-y-4">
+                  {isDataLoading && Object.keys(dailyRecords).length === 0 ? (
+                    <div className="py-20 text-center space-y-4 bg-white rounded-3xl border border-slate-100 shadow-sm">
+                      <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mx-auto" />
+                      <p className="text-slate-400 font-black italic uppercase tracking-widest text-xs">正在從雲端同步數據...</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h3 className="font-black text-slate-800 text-lg italic px-2 tracking-tighter uppercase mb-4 text-center">Top 3rd & 4th Grades</h3>
-                    <div className="space-y-4">
-                      {middleGradeRanking.map((item, index) => (
-                        <div key={item.name} className="relative">
-                          <div className="flex justify-between mb-1.5 font-black uppercase text-xs">
-                            <span className="text-slate-700">#{index + 1} {item.name}</span>
-                            <span className="text-emerald-600 italic">{item.total} Laps</span>
-                          </div>
-                          <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-50">
-                            <motion.div 
-                              initial={{ width: 0 }}
-                              animate={{ width: `${(item.total / (maxLapsMiddle || 1) * 100)}%` }}
-                              transition={{ duration: 1, ease: "easeOut" }}
-                              className="h-full bg-gradient-to-r from-emerald-400 to-teal-600 shadow-sm"
-                            />
-                          </div>
+                  ) : (
+                    rankingView === 'high' ? (
+                      <div className="space-y-4">
+                        <h3 className="font-black text-slate-800 text-lg italic px-2 tracking-tighter uppercase mb-4 text-center">Top 5th & 6th Grades</h3>
+                        <div className="space-y-4">
+                          {highGradeRanking.map((item, index) => (
+                            <div key={item.name} className="relative">
+                              <div className="flex justify-between mb-1.5 font-black uppercase text-xs">
+                                <span className="text-slate-700">#{index + 1} {item.name}</span>
+                                <span className="text-indigo-600 italic">{item.total} Laps</span>
+                              </div>
+                              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-50">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(item.total / (maxLapsHigh || 1) * 100)}%` }}
+                                  transition={{ duration: 1, ease: "easeOut" }}
+                                  className="h-full bg-gradient-to-r from-indigo-500 to-blue-700 shadow-sm"
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <h3 className="font-black text-slate-800 text-lg italic px-2 tracking-tighter uppercase mb-4 text-center">Top 3rd & 4th Grades</h3>
+                        <div className="space-y-4">
+                          {middleGradeRanking.map((item, index) => (
+                            <div key={item.name} className="relative">
+                              <div className="flex justify-between mb-1.5 font-black uppercase text-xs">
+                                <span className="text-slate-700">#{index + 1} {item.name}</span>
+                                <span className="text-emerald-600 italic">{item.total} Laps</span>
+                              </div>
+                              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden shadow-inner border border-slate-50">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(item.total / (maxLapsMiddle || 1) * 100)}%` }}
+                                  transition={{ duration: 1, ease: "easeOut" }}
+                                  className="h-full bg-gradient-to-r from-emerald-400 to-teal-600 shadow-sm"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  )}
+                  {!isDataLoading && (rankingView === 'high' ? highGradeRanking : middleGradeRanking).every(r => r.total === 0) && (
+                    <div className="py-10 px-6 bg-amber-50 rounded-3xl border border-amber-100 text-center space-y-2">
+                      <p className="text-amber-600 font-black italic uppercase tracking-tighter">目前尚無雲端數據</p>
+                      <p className="text-[10px] text-amber-400 font-bold leading-relaxed">
+                        如果您在電腦上有資料但手機沒有，請在電腦端的「管理」選單中點擊「同步所有資料至雲端」。
+                      </p>
                     </div>
-                  </div>
-                )
+                  )}
+                </div>
               )}
             </motion.div>
           )}
