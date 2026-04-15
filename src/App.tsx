@@ -225,6 +225,56 @@ const SportyAvatar = ({ color, label, isSelected }: { color: string, label: stri
   </div>
 );
 
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+};
+
 export default function App() {
   const isCvReady = useOpenCV();
   const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
@@ -244,7 +294,7 @@ export default function App() {
   const [editingStudent, setEditingStudent] = useState<{ class: string, index: number, name: string } | null>(null);
   const [selectedClass, setSelectedClass] = useState("四年甲班");
   const [dailyRecords, setDailyRecords] = useState<DailyRecords>({});
-  const [students, setStudents] = useState<StudentData>({});
+  const [students, setStudents] = useState<StudentData>(INITIAL_STUDENT_DATA);
   const [scanSessionIndex, setScanSessionIndex] = useState(0);
   const [inputMode, setInputMode] = useState<'photo' | 'scan'>('photo');
   const [isScanning, setIsScanning] = useState(false);
@@ -289,15 +339,9 @@ export default function App() {
       
       if (Object.keys(newStudents).length > 0) {
         setStudents(newStudents);
-      } else {
-        // If no students in Firebase, try localStorage or initial data
-        const savedStudents = localStorage.getItem(STUDENTS_STORAGE_KEY);
-        if (savedStudents) {
-          setStudents(JSON.parse(savedStudents));
-        } else {
-          setStudents(INITIAL_STUDENT_DATA);
-        }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'students');
     });
 
     // Listen to records
@@ -308,12 +352,9 @@ export default function App() {
       });
       if (Object.keys(newRecords).length > 0) {
         setDailyRecords(newRecords);
-      } else {
-        const savedRecords = localStorage.getItem(STORAGE_KEY);
-        if (savedRecords) {
-          setDailyRecords(JSON.parse(savedRecords));
-        }
       }
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'records');
     });
 
     return () => {
@@ -673,9 +714,13 @@ export default function App() {
               onChange={(e) => setSelectedClass(e.target.value)}
               className="flex-1 p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold outline-none shadow-inner"
             >
-              {sortedClassNames.map(className => (
-                <option key={className} value={className}>{className}</option>
-              ))}
+              {sortedClassNames.length === 0 ? (
+                <option value="">載入中...</option>
+              ) : (
+                sortedClassNames.map(className => (
+                  <option key={className} value={className}>{className}</option>
+                ))
+              )}
             </select>
             <input 
               type="date" 
