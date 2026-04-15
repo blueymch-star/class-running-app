@@ -323,18 +323,19 @@ export default function App() {
     };
   }, []);
 
-  const saveRecords = async (records: DailyRecords, dateToDelete?: string) => {
+  const saveRecords = async (records: DailyRecords, targetDate?: string, isDelete: boolean = false) => {
     setDailyRecords(records);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     
     if (user) {
+      const dateToProcess = targetDate || today;
       try {
-        if (dateToDelete) {
-          await deleteDoc(doc(db, 'records', dateToDelete));
+        if (isDelete) {
+          await deleteDoc(doc(db, 'records', dateToProcess));
         } else {
-          const todayData = records[today] || {};
-          await setDoc(doc(db, 'records', today), {
-            data: todayData,
+          const data = records[dateToProcess] || {};
+          await setDoc(doc(db, 'records', dateToProcess), {
+            data: data,
             updatedAt: new Date().toISOString()
           });
         }
@@ -462,7 +463,7 @@ export default function App() {
       onConfirm: () => {
         const newRecords = { ...dailyRecords };
         delete newRecords[today];
-        saveRecords(newRecords, today);
+        saveRecords(newRecords, today, true);
         setConfirmAction(null);
       }
     });
@@ -583,7 +584,7 @@ export default function App() {
       }
     });
 
-    saveRecords(newRecords);
+    saveRecords(newRecords, targetDate);
     setScanConfirmResult(null);
     setToday(targetDate);
   };
@@ -611,7 +612,11 @@ export default function App() {
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
-        const [className, id, name] = line.split(',');
+        const parts = line.split(',');
+        if (parts.length < 3) continue;
+        const className = parts[0].trim();
+        const id = parts[1].trim();
+        const name = parts[2].trim();
         if (!className || !id || !name) continue;
         
         if (!newStudents[className]) newStudents[className] = [];
@@ -1290,6 +1295,11 @@ export default function App() {
                           <p className="font-black text-slate-800">{date}</p>
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
                             共 {Object.keys(dailyRecords[date]).length} 筆資料
+                            {Object.keys(dailyRecords[date]).length > 0 && (
+                              <span className="ml-2 text-blue-400">
+                                ({Array.from(new Set(Object.keys(dailyRecords[date]).map(k => k.split('_')[0]))).join(', ')})
+                              </span>
+                            )}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -1302,7 +1312,7 @@ export default function App() {
                                 onConfirm: () => {
                                   const newRecords = { ...dailyRecords };
                                   delete newRecords[date];
-                                  saveRecords(newRecords, date);
+                                  saveRecords(newRecords, date, true);
                                   setConfirmAction(null);
                                 }
                               });
